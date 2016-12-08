@@ -46,6 +46,8 @@ void setup() {
   yield();
 
   myIn.begin(6);
+
+  Serial2.begin(9600);  // Datalogger
 }
 
 void loop() {
@@ -66,20 +68,28 @@ void loop() {
   
   setPwm(0, lOut);
   setPwm(1, rOut);
+  setPwm(2, (flap*50)-100);
+  setPwm(3, (fm * 100)-100);
 
+  Serial.print(flap);
+  Serial.print("\t");
+  Serial.print(fm);
+  Serial.print("\t");
+  Serial.print(aux);
+  Serial.println("\t");
   
   //Serial.println(inverted ? 1 : 0);
-  Serial.print(connected);
-  Serial.print("\t");
-  Serial.print(num);
-  Serial.print("\t");
-  Serial.print(axis[0]);
-  Serial.print("\t");
-  Serial.print(axis[1]);
-  Serial.print("\t");
-  Serial.print(axis[2]);
-  Serial.print("\t");
-  Serial.println(axis[3]);
+  Serial2.print(connected);
+  Serial2.print("\t");
+  Serial2.print(num);
+  Serial2.print("\t");
+  Serial2.print(axis[0]);
+  Serial2.print("\t");
+  Serial2.print(axis[1]);
+  Serial2.print("\t");
+  Serial2.print(axis[2]);
+  Serial2.print("\t");
+  Serial2.println(axis[3]);
   delay(10);
 }
 
@@ -134,9 +144,9 @@ void updateRx() {
     axis[1] = map(myIn.read(2), 1100, 1925, -100, 100);
     axis[2] = map(myIn.read(3), 805, 2215, -100, 100)-2;
     axis[3] = map(myIn.read(4), 1100, 1925, -100, 100);
-    flap = myIn.read(5);
-    fm = myIn.read(7);
-    aux = myIn.read(8);
+    flap = map(myIn.read(5), 801, 2219, 0, 2);
+    fm = map(myIn.read(7), 1034, 1985, 0, 2);
+    aux = map(myIn.read(8), 1034, 1985, 0, 1);
     conn_ctr = 0;
   } else {
     conn_ctr++;
