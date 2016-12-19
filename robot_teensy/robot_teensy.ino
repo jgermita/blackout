@@ -39,7 +39,7 @@ int accel_data[] = {0, 0, 0};
 int gyro_data[] = {0, 0, 0};
 
 // Robot Orientation stuff:
-byte v_axis = 2; // selector for vertical axis, 0 = x, 1 = y, 2 = z, 3 = disable inversion check
+byte v_axis = 3; // selector for vertical axis, 0 = x, 1 = y, 2 = z, 3 = disable inversion check
 #define v_invert 1
 boolean inverted = false;
 
@@ -73,8 +73,8 @@ void loop() {
     rOut = -axis[THROTTLE];
   }
 
-  motor[LEFT_DRIVE] = lOut;
-  motor[RIGHT_DRIVE] = rOut;
+  motor[LEFT_DRIVE] = -lOut;
+  motor[RIGHT_DRIVE] = -rOut;
 
   // "SmartSpin" weapon control. 
   // pulls back weapon command speed as a function of commanded turning rate
@@ -89,7 +89,6 @@ void loop() {
   updateRx();
   updatePwm();
   updateLog();
-  delay(5);
 }
 
 
@@ -124,11 +123,13 @@ void updateSensors() {
       axis = accel_data[1]; break;
     case 2:
       axis = accel_data[2]; break;
+    case 3:
+      axis = 0; break;
   }
 
-  axis *= v_invert;
+  axis *= -v_invert;
 
-  if(axis < -7) {
+  if(axis < -4) {
     inv_ctr++;
   } else {
     inv_ctr = 0;
@@ -137,8 +138,8 @@ void updateSensors() {
   inverted = inv_ctr > 2;
   
   /* Use the new fusionGetOrientation function to merge accel/mag data */
-  if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
-  {
+  //if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
+  //{
     /* 'orientation' should have valid .roll and .pitch fields */
     //Serial.print(("Orientation: "));
     //Serial.print(orientation.roll);
@@ -147,7 +148,7 @@ void updateSensors() {
     //Serial.print((" "));
     //Serial.print(orientation.heading);
     //Serial.println((""));
-  }
+  //}
 
 }
 
