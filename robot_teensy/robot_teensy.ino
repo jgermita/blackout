@@ -4,6 +4,7 @@
 #include <Adafruit_L3GD20_U.h>
 #include <PulsePosition.h>
 #include <Adafruit_PWMServoDriver.h>
+#include "curves.h";
 
 // Servo driver stuff:
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -14,7 +15,7 @@ int8_t motor[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #define LEFT_DRIVE 0
 #define RIGHT_DRIVE 1
 #define WEAPON 2
-#define LED_STRIP 3
+#define LED_STRIP 5
 
 // PPM decoder stuff:
 PulsePositionInput myIn;
@@ -43,6 +44,11 @@ byte v_axis = 3; // selector for vertical axis, 0 = x, 1 = y, 2 = z, 3 = disable
 #define v_invert 1
 boolean inverted = false;
 
+// weapon setpoints
+#define WEAPON_ZERO -100
+#define WEAPON_SLOW -45
+#define WEAPON_FAST 0
+
 void setup() {
   Serial.begin(115200);	// Serial for debugging...
   delay(50);	// Delay to let devices connect.
@@ -61,16 +67,23 @@ void setup() {
   Serial2.begin(9600);  // Datalogger
 }
 
-void loop() {
-  int8_t lOut = 0;
-  int8_t rOut = 0;
+int8_t lOut = 0;
+int8_t rOut = 0;
 
-  if (!inverted) {
-    lOut = axis[THROTTLE];
-    rOut = axis[ELEVATOR];
+void loop() {
+
+  if(fm == 0) {
+    tankDrive();
+  } else if(fm == 1) {
+    arcadeDrive();
   } else {
-    lOut = -axis[ELEVATOR];
-    rOut = -axis[THROTTLE];
+    lOut = 0;
+    rOut = 0;
+  }
+
+  if(aux == 0) {
+    lOut /= 4;
+    rOut /= 4;
   }
 
   motor[LEFT_DRIVE] = -lOut;
@@ -78,12 +91,23 @@ void loop() {
 
   // "SmartSpin" weapon control. 
   // pulls back weapon command speed as a function of commanded turning rate
-  int8_t weaponIn = (flap * 50) - 100;
+  
+  int8_t weaponIn = -100;
+  if(flap == 0) weaponIn = WEAPON_ZERO;
+  if(flap == 1) weaponIn = WEAPON_SLOW;
+  if(flap == 2) weaponIn = WEAPON_FAST;
   
   int8_t turning = (motor[LEFT_DRIVE] + motor[RIGHT_DRIVE]);
-  motor[WEAPON] = weaponIn - ((turning*4)/5);
   
-  motor[LED_STRIP] = (fm * 100) - 100;
+  motor[WEAPON] = filterWeapon(weaponIn);// - ((turning*4)/5);
+
+  //if(motor[WEAPON] > -90) {
+  //  motor[LED_STRIP] = -50;
+  //} else {
+  //  motor[LED_STRIP] = 50;
+  //}
+
+  motor[LED_STRIP] = axis[YAW];
   
   updateSensors();
   updateRx();
@@ -91,6 +115,20 @@ void loop() {
   updateLog();
 }
 
+void tankDrive() {
+  if (!inverted) {
+    lOut = axis[THROTTLE];
+    rOut = axis[ELEVATOR];
+  } else {
+    lOut = -axis[ELEVATOR];
+    rOut = -axis[THROTTLE];
+  }
+}
+
+void arcadeDrive() {
+  lOut = getCurve(axis[THROTTLE]) - getCurve2(axis[ROLL]);
+  rOut = getCurve(axis[THROTTLE]) + getCurve2(axis[ROLL]);;
+}
 
 void updatePwm() {
   digitalWrite(17, !connected);
@@ -105,12 +143,12 @@ void updatePwm() {
 int inv_ctr = 0;
 void updateSensors() {
   sensors_event_t accel_event;
-  sensors_event_t mag_event;
+  //sensors_event_t mag_event;
   sensors_vec_t   orientation;
 
   /* Read the accelerometer and magnetometer */
   accel.getEvent(&accel_event);
-  mag.getEvent(&mag_event);
+  //mag.getEvent(&mag_event);
 
   accel_data[0] = accel_event.acceleration.x;
   accel_data[1] = accel_event.acceleration.y;
@@ -232,5 +270,39 @@ void updateLog() {
     }
     Serial2.println("");
   }
+}
+
+float wcurr = -100;
+boolean spinup = false;
+boolean atTarget = false;
+float rampRate = .7;
+int filterWeapon(int setpoint) {
+  
+  if(setpoint < -15) rampRate = 0.7;
+  if(setpoint >= 30) rampRate = .9;
+  
+  if(setpoint > -70) {
+     if(!spinup) {
+      spinup = true;
+       wcurr = -30.0;
+     }
+    if(setpoint != wcurr) {
+       if(setpoint > wcurr) {
+         wcurr += rampRate;
+       } else {
+         wcurr = (float)setpoint;
+       }
+       atTarget = false;
+    } else {
+      atTarget = true;
+    }
+  } else {
+    wcurr = -100.0;
+    spinup = false;
+  }
+  
+  wcurr = min(wcurr, 70);
+  wcurr = max(-100, wcurr);
+  return (int)wcurr;
 }
 
