@@ -20,7 +20,7 @@ int8_t motor[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // PPM decoder stuff:
 PulsePositionInput myIn;
 boolean connected = false, firstConnect = false;
-int8_t axis[] = {0, 0, 0, 0};
+int axis[] = {0, 0, 0, 0};
 int flap = 0;
 int fm = 0;
 int aux = 0;
@@ -46,8 +46,8 @@ boolean inverted = false;
 
 // weapon setpoints
 #define WEAPON_ZERO -100
-#define WEAPON_SLOW -45
-#define WEAPON_FAST 0
+#define WEAPON_SLOW -35
+#define WEAPON_FAST -10
 
 void setup() {
   Serial.begin(115200);	// Serial for debugging...
@@ -67,8 +67,8 @@ void setup() {
   Serial2.begin(9600);  // Datalogger
 }
 
-int8_t lOut = 0;
-int8_t rOut = 0;
+int lOut = 0;
+int rOut = 0;
 
 void loop() {
 
