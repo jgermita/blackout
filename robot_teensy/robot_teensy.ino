@@ -46,7 +46,7 @@ boolean inverted = false;
 
 // weapon setpoints
 #define WEAPON_ZERO -100
-#define WEAPON_SLOW -35
+#define WEAPON_SLOW -25
 #define WEAPON_FAST -10
 
 void setup() {
@@ -117,11 +117,11 @@ void loop() {
 
 void tankDrive() {
   if (!inverted) {
-    lOut = axis[THROTTLE];
-    rOut = axis[ELEVATOR];
+    lOut = getCurve(axis[THROTTLE]);
+    rOut = getCurve(axis[ELEVATOR]);
   } else {
-    lOut = -axis[ELEVATOR];
-    rOut = -axis[THROTTLE];
+    lOut = -getCurve(axis[ELEVATOR]);
+    rOut = -getCurve(axis[THROTTLE]);
   }
 }
 
@@ -278,7 +278,7 @@ boolean atTarget = false;
 float rampRate = .7;
 int filterWeapon(int setpoint) {
   
-  if(setpoint < -15) rampRate = 0.7;
+  if(setpoint < -15) rampRate = 1.5;
   if(setpoint >= 30) rampRate = .9;
   
   if(setpoint > -70) {
